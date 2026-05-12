@@ -7,33 +7,23 @@ import path from 'path';
 const LOCK_FILE = path.join(process.cwd(), 'scan.lock');
 const PASSCODES_FILE = path.join(process.cwd(), 'passcodes.txt');
 
-export async function GET(req: Request) {
+// 統一的密碼驗證器
+const authenticate = (req: Request) => {
   const authHeader = req.headers.get('Authorization') || '';
-  const providedPassword = authHeader.replace('Bearer ', '').trim();
-  // 如果讀不到，就顯示警告文字
-  const expectedPassword = process.env.ADMIN_PASSWORD?.trim() || '讀取不到變數';
+  const expectedPassword = process.env.ADMIN_PASSWORD?.trim();
+  return authHeader.replace('Bearer ', '').trim() === expectedPassword;
+};
 
-  // 【除錯核心】如果密碼不對，直接把雙方的密碼丟回前端看！
-  if (providedPassword !== expectedPassword) {
-    return NextResponse.json(
-      { error: `除錯: 你的輸入[${providedPassword}] vs 系統讀取[${expectedPassword}]` }, 
-      { status: 401 }
-    );
-  }
-
+export async function GET(req: Request) {
+  if (!authenticate(req)) return NextResponse.json({ error: '超級密碼錯誤' }, { status: 401 });
+  
   const isLocked = fs.existsSync(LOCK_FILE);
   const passcodes = fs.existsSync(PASSCODES_FILE) ? fs.readFileSync(PASSCODES_FILE, 'utf-8') : '';
   return NextResponse.json({ isLocked, passcodes });
 }
 
-// ---------------------------------------------------------
-// POST 的部分我們暫時先不動，等登入成功再來管它
 export async function POST(req: Request) {
-  const authHeader = req.headers.get('Authorization') || '';
-  const expectedPassword = process.env.ADMIN_PASSWORD?.trim();
-  if (authHeader.replace('Bearer ', '').trim() !== expectedPassword) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!authenticate(req)) return NextResponse.json({ error: '超級密碼錯誤' }, { status: 401 });
   
   const { action, payload } = await req.json();
   if (action === 'unlock') {

@@ -34,25 +34,35 @@ export async function POST(req: Request) {
     const verifyData = await verifyRes.json();
     if (!verifyData.success) return NextResponse.json({ error: '人機驗證失敗' }, { status: 401 });
 
-    // 2. 授權碼驗證
+    // 2. 讀取並驗證授權碼
     if (!fs.existsSync(PASSCODES_FILE)) return NextResponse.json({ error: '系統未設定密碼本' }, { status: 500 });
-    const validPasscodes = fs.readFileSync(PASSCODES_FILE, 'utf-8').split('\n').map(p => p.trim()).filter(Boolean);
-    if (!validPasscodes.includes(passcode?.trim())) return NextResponse.json({ error: '掃描授權碼錯誤' }, { status: 403 });
+    let validPasscodes = fs.readFileSync(PASSCODES_FILE, 'utf-8').split('\n').map(p => p.trim()).filter(Boolean);
+    const providedPasscode = passcode?.trim();
+    
+    if (!validPasscodes.includes(providedPasscode)) {
+      return NextResponse.json({ error: '掃描授權碼錯誤或已被使用' }, { status: 403 });
+    }
 
     cleanupOldScans();
 
-    // 3. 防呆鎖
+    // 3. 防呆鎖 (先檢查機台是否可用，可用才核銷密碼)
     if (fs.existsSync(LOCK_FILE)) {
       const lockStats = fs.statSync(LOCK_FILE);
       if (Date.now() - lockStats.mtimeMs > 3 * 60 * 1000) {
         fs.unlinkSync(LOCK_FILE); 
       } else {
+        // 機台忙碌中，直接退回，【不消耗】客人的密碼
         return NextResponse.json({ error: '機台目前有人正在使用中，請稍候' }, { status: 423 });
       }
     }
+
+    // 4. 🔥 核銷密碼 (確認機台可用後，把用過的密碼從陣列中刪除，並寫回檔案)
+    validPasscodes = validPasscodes.filter(p => p !== providedPasscode);
+    fs.writeFileSync(PASSCODES_FILE, validPasscodes.join('\n') + '\n');
+
+    // 5. 鎖定機台並開始背景掃描
     fs.writeFileSync(LOCK_FILE, 'locked');
 
-    // 4. 背景掃描
     const jobId = Date.now().toString();
     const outputPath = path.join(SCANS_DIR, `${jobId}.pdf`);
     const errorPath = path.join(SCANS_DIR, `${jobId}.error`);
