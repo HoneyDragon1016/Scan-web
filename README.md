@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📠 雲端自助掃描服務 (Cloud Document Scan System)
 
-## Getting Started
+這是一個專為實體自助掃描站點設計的「雲端遠端控制系統」。透過 Web 架構與內網穿透技術，將傳統的本地掃描器轉化為現代化的無人自助雲端服務。使用者無須安裝任何驅動程式或隨身碟，只需透過網頁輸入一次性授權碼，即可遠端驅動實體掃描器，並將文件直接下載至個人裝置。
 
-First, run the development server:
+## 此專案特別注重硬體防呆與資訊安全，旨在提供低維護成本、高穩定性的無人化營運體驗。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### ✨ 核心功能 (Key Features)
+* **🔒 硬體獨佔防呆鎖 (Hardware Mutex Lock)**：掃描指令觸發時自動產生鎖定檔 (`scan.lock`)，拒絕其他併發請求，防止機台因多人同時操作而當機。
+* **🔐 一次性授權碼 (OTP 閱後即焚)**：採用代幣化密碼機制，驗證成功後立即銷毀該組密碼，確保掃描權限不被重複濫用。
+* **🛡️ 企業級資安防禦**：整合 Cloudflare Turnstile 零干擾人機驗證，搭配後端 API 防護，徹底阻擋自動化腳本與惡意攻擊。
+* **🎛️ 隱藏版管理後台**：內建需超級密碼登入的管理面板，提供即時機台狀態監控、強制解除硬體鎖定，以及一鍵更新授權密碼本的功能。
+* **🧹 定時自動清理**：實作定時垃圾車機制，自動清除過期的掃描暫存檔，確保伺服器硬碟空間不被佔滿。
+* **🌐 國際化雙語介面**：內建中/英 (ZH/EN) 一鍵切換功能，友善外籍使用者。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🛠️ 技術棧 (Tech Stack)
+* **前端框架**：Next.js (React), Tailwind CSS, Lucide React
+* **後端環境**：Node.js
+* **掃描引擎**：NAPS2 (Not Another PDF Scanner 2) CLI 控制
+* **內網穿透**：Cloudflare Tunnel
+* **進階防護**：Cloudflare Turnstile
+* **進程管理**：PM2
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### ⚙️ 系統環境與安裝 (Installation & Setup)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**1. 環境需求**
+* Windows 系統 (負責掛載實體掃描器)
+* Node.js (建議 v18+)
+* 必須安裝 **NAPS2**，並確認掃描器已設定完成 (本專案預設 Profile 名稱為 `L360`)
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**2. 環境變數設定**
+在專案根目錄建立 `.env` 或 `.env.local` 檔案，並配置以下金鑰：
+```env
+TURNSTILE_SECRET_KEY=您的_Cloudflare_Secret_Key
+ADMIN_PASSWORD=您的_超級管理員密碼
